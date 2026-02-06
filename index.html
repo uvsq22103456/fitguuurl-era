@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <!-- Viewport strict pour bloquer le zoom et forcer le look App -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Fitness</title>
+    
+    <!-- CONFIGURATION PWA IPHONE (MODE APP STRICT) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Fitness">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#020617">
+
+    <!-- ICÔNE D'ACCUEIL : Fond NOIR solide, lettre F blanche (Garanti sans carré blanc) -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgZmlsbD0iIzAyMDYxNyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTUlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjkwMCIgZm9udC1zaXplPSIxMDAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LXN0eWxlPSJpdGFsaWMiPkY8L3RleHQ+PC9zdmc+">
+    
+    <!-- MANIFEST AVEC SCOPE RÉDUIT POUR ÉVITER SAFARI -->
+    <link rel="manifest" href='data:application/json,{"name":"Fitness","short_name":"Fitness","start_url":"./index.html","scope":"./","display":"standalone","background_color":"#020617","theme_color":"#020617","id":"fitness-app-v1"}'>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        
+        :root {
+            --bg: #020617;
+            --card: #0f172a;
+            --text: #f1f5f9;
+            --border: #1e293b;
+            --accent: #f472b6;
+        }
+
+        .light-mode {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #0f172a;
+            --border: #e2e8f0;
+            --accent: #ec4899;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg); 
+            color: var(--text); 
+            transition: background-color 0.3s;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior: none;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .bg-card { background-color: var(--card); border: 1px solid var(--border); }
+        .tab-active { color: var(--accent) !important; border-bottom: 3px solid var(--accent) !important; opacity: 1 !important; }
+        
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; max-width: 280px; margin: 0 auto; }
+        .day-cell { 
+            aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; 
+            border-radius: 8px; font-size: 0.65rem; font-weight: 800;
+            background: rgba(128, 128, 128, 0.05); border: 1px solid var(--border);
+        }
+        .day-workout { background: linear-gradient(135deg, #34d399 0%, #10b981 100%); color: #064e3b !important; border: none; }
+        .day-today { border: 2px solid #38bdf8 !important; color: #38bdf8; }
+        .day-selected { background: var(--accent) !important; color: white !important; transform: scale(1.1); z-index: 10; }
+
+        .view-content { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        progress { border-radius: 20px; overflow: hidden; height: 5px; width: 100%; }
+        progress::-webkit-progress-bar { background-color: rgba(128,128,128,0.1); }
+        #barCals::-webkit-progress-value { background: #38bdf8; }
+        #barProt::-webkit-progress-value { background: #34d399; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .safe-pt { padding-top: env(safe-area-inset-top); }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Header Style BU-Buddy -->
+    <header class="bg-card border-b sticky top-0 z-50 safe-pt backdrop-blur-xl">
+        <div class="max-w-xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <!-- Logo F Premium -->
+                <div class="w-9 h-9 bg-slate-900 dark:bg-white rounded-xl flex items-center justify-center shadow-lg border border-white/10">
+                    <span class="text-white dark:text-slate-900 font-black text-xl italic leading-none">F</span>
+                </div>
+                <h1 class="text-[10px] font-black tracking-[0.4em] uppercase opacity-30">Fitness</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleTheme()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-500/10 text-lg" id="themeIcon">🌙</button>
+                <div class="flex flex-col items-end">
+                    <span class="text-[7px] font-black opacity-30 uppercase tracking-widest">Série</span>
+                    <span class="text-sm font-black text-orange-500" id="streak-display">0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-card border-b sticky top-[calc(61px+env(safe-area-inset-top))] z-40 overflow-x-auto no-scrollbar">
+        <div class="max-w-xl mx-auto flex px-2 min-w-max">
+            <button onclick="showTab('home', this)" class="nav-btn px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] tab-active">Focus</button>
+            <button onclick="showTab('sport', this)" class="nav-btn px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] opacity-30">Sport</button>
+            <button onclick="showTab('food', this)" class="nav-btn px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] opacity-30">Food</button>
+            <button onclick="showTab('stats', this)" class="nav-btn px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] opacity-30">Stats</button>
+        </div>
+    </nav>
+
+    <!-- Contenu Principal -->
+    <main class="flex-1 overflow-y-auto max-w-xl mx-auto w-full p-5 pb-24 no-scrollbar">
+        <div id="view-home" class="view-content space-y-6">
+            <div class="bg-card p-6 rounded-[2rem] space-y-6 shadow-sm">
+                <div class="flex justify-between items-center">
+                    <p id="display-date" class="text-[9px] font-black text-sky-400 uppercase tracking-widest italic tracking-tighter">Aujourd'hui</p>
+                    <button onclick="openGoalModal()" class="text-[8px] font-black opacity-40 uppercase tracking-widest">Objectifs</button>
+                </div>
+                <div class="space-y-5">
+                    <div>
+                        <div class="flex justify-between text-[9px] font-black mb-2 uppercase opacity-40 tracking-widest">
+                            <span>⚡ Calories</span>
+                            <span id="txt-cals">0 / 2100</span>
+                        </div>
+                        <progress id="barCals" value="0" max="2100"></progress>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[9px] font-black mb-2 uppercase opacity-40 tracking-widest">
+                            <span>🍀 Protéines</span>
+                            <span id="txt-prot">0 / 130</span>
+                        </div>
+                        <progress id="barProt" value="0" max="130"></progress>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-card p-6 text-center flex flex-col items-center rounded-[2rem]">
+                    <span class="text-[8px] font-black opacity-30 uppercase tracking-[0.2em] block mb-4">Gourde</span>
+                    <p class="text-4xl font-black text-sky-400 mb-5" id="water-count">0</p>
+                    <button onclick="addWater()" class="w-full py-3 bg-sky-500/10 text-sky-500 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all">Boire</button>
+                </div>
+                <div class="bg-card p-6 text-center flex flex-col items-center rounded-[2rem]">
+                    <span class="text-[8px] font-black opacity-30 uppercase tracking-[0.2em] block mb-4">Volume (kg)</span>
+                    <p class="text-4xl font-black text-emerald-400 mb-5" id="vol-count">0</p>
+                    <div class="w-full py-3 bg-emerald-500/10 text-emerald-400 rounded-xl font-black text-[9px] uppercase tracking-widest">Force</div>
+                </div>
+            </div>
+
+            <div class="bg-card p-6 rounded-[2rem] space-y-5">
+                <h3 class="text-[9px] font-black opacity-30 uppercase tracking-[0.2em] italic">Lifestyle</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2 text-center">
+                        <label class="text-[8px] font-black text-violet-400 uppercase tracking-widest">💤 Sommeil</label>
+                        <input type="number" id="in-sleep" onchange="saveLifestyle('sleep')" placeholder="h" class="w-full p-4 rounded-xl outline-none font-black text-center bg-slate-500/5 text-xl">
+                    </div>
+                    <div class="space-y-2 text-center">
+                        <label class="text-[8px] font-black text-orange-400 uppercase tracking-widest">👣 Pas</label>
+                        <input type="number" id="in-steps" onchange="saveLifestyle('steps')" placeholder="10k" class="w-full p-4 rounded-xl outline-none font-black text-center bg-slate-500/5 text-xl">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-card p-6 rounded-[2rem] text-center">
+                <div class="flex justify-between items-center mb-6 px-2">
+                    <button onclick="changeMonth(-1)" class="p-2 opacity-20 text-xl">❮</button>
+                    <h2 id="month-name" class="font-black text-sm uppercase tracking-[0.2em] flex-1 italic text-center">...</h2>
+                    <button onclick="changeMonth(1)" class="p-2 opacity-20 text-xl">❯</button>
+                </div>
+                <div class="grid grid-cols-7 text-center text-[7px] font-black opacity-20 uppercase mb-4 max-w-[280px] mx-auto">
+                    <div>Lu</div><div>Ma</div><div>Me</div><div>Je</div><div>Ve</div><div>Sa</div><div>Di</div>
+                </div>
+                <div id="calendar-grid" class="calendar-grid"></div>
+            </div>
+            <button onclick="clearAllData()" class="w-full text-[8px] font-black opacity-10 uppercase tracking-[0.4em] py-8">Réinitialiser</button>
+        </div>
+    </main>
+
+    <!-- Modal Réglages -->
+    <div id="modal-goals" class="fixed inset-0 flex items-center justify-center p-6 z-[100] hidden bg-black/60 backdrop-blur-sm">
+        <div class="bg-card w-full max-w-sm p-8 rounded-[2.5rem] space-y-8 shadow-2xl">
+            <h2 class="text-xl font-black italic uppercase text-center">Objectifs</h2>
+            <div class="space-y-5">
+                <input type="number" id="set-goal-kcal" placeholder="Kcal" class="w-full p-4 rounded-xl outline-none font-black bg-slate-500/10">
+                <input type="number" id="set-goal-prot" placeholder="Prot" class="w-full p-4 rounded-xl outline-none font-black bg-slate-500/10">
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeGoalModal()" class="flex-1 p-4 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-[10px]">Retour</button>
+                <button onclick="saveGoals()" class="flex-1 p-4 bg-pink-500 text-white rounded-xl font-black uppercase text-[10px]">Valider</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let db = { workouts: [], nutrition: [], goals: { kcal: 2100, prot: 130 }, water: {}, history: [], lifestyle: {}, theme: 'dark' };
+        const d = new Date(), todayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        let selDate = todayStr, calDate = new Date();
+
+        function load() {
+            const saved = localStorage.getItem('MF_STRICT_FINAL_v2');
+            if(saved) db = JSON.parse(saved);
+            if(db.theme === 'light') document.body.classList.add('light-mode');
+            refresh();
+        }
+
+        function save() { localStorage.setItem('MF_STRICT_FINAL_v2', JSON.stringify(db)); refresh(); }
+        function refresh() {
+            const ws = db.workouts.filter(x => x.date === selDate), ns = db.nutrition.filter(x => x.date === selDate);
+            const tk = ns.reduce((s,x) => s + x.kcal, 0), tp = ns.reduce((s,x) => s + x.prot, 0), tv = ws.reduce((s,x) => s + ((x.weight||0) * (x.reps||0)), 0);
+            document.getElementById('txt-cals').innerText = `${tk} / ${db.goals.kcal}`;
+            document.getElementById('txt-prot').innerText = `${tp} / ${db.goals.prot}`;
+            document.getElementById('barCals').value = tk; document.getElementById('barCals').max = db.goals.kcal;
+            document.getElementById('barProt').value = tp; document.getElementById('barProt').max = db.goals.prot;
+            document.getElementById('water-count').innerText = db.water[selDate] || 0;
+            document.getElementById('vol-count').innerText = tv;
+            renderCalendar();
+            document.getElementById('display-date').innerText = selDate === todayStr ? "Aujourd'hui" : new Date(selDate).toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid'), year = calDate.getFullYear(), month = calDate.getMonth();
+            document.getElementById('month-name').innerText = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"][month];
+            grid.innerHTML = ''; let first = new Date(year, month, 1).getDay(), offset = first === 0 ? 6 : first - 1;
+            for(let i=0; i<offset; i++) grid.innerHTML += '<div></div>';
+            const days = new Date(year, month + 1, 0).getDate();
+            for(let d=1; d<=days; d++) {
+                const dc = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const hasW = db.workouts.some(w => w.date === dc);
+                let cls = 'day-cell'; if(hasW) cls += ' day-workout';
+                if(dc === todayStr) cls += ' day-today'; if(dc === selDate) cls += ' day-selected';
+                grid.innerHTML += `<div onclick="selectDate('${dc}')" class="${cls}">${d}</div>`;
+            }
+        }
+
+        function selectDate(d) { selDate = d; refresh(); }
+        function changeMonth(v) { calDate.setMonth(calDate.getMonth()+v); renderCalendar(); }
+        function showTab(id, btn) { document.querySelectorAll('.view-content').forEach(v => v.classList.add('hidden')); document.getElementById('view-'+id).classList.remove('hidden'); document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('tab-active'); b.classList.add('opacity-30'); }); btn.classList.add('tab-active'); btn.classList.remove('opacity-30'); }
+        function toggleTheme() { const isLight = document.body.classList.toggle('light-mode'); db.theme = isLight ? 'light' : 'dark'; save(); }
+        function addWater() { const c = db.water[selDate] || 0; db.water[selDate] = c >= 15 ? 0 : c + 1; save(); }
+        function saveLifestyle(type) { if(!db.lifestyle[selDate]) db.lifestyle[selDate] = {}; const v = type === 'sleep' ? document.getElementById('in-sleep').value : document.getElementById('in-steps').value; db.lifestyle[selDate][type] = parseFloat(v); save(); }
+        function openGoalModal() { document.getElementById('modal-goals').classList.remove('hidden'); }
+        function closeGoalModal() { document.getElementById('modal-goals').classList.add('hidden'); }
+        function saveGoals() { db.goals.kcal = parseInt(document.getElementById('set-goal-kcal').value); db.goals.prot = parseInt(document.getElementById('set-goal-prot').value); save(); closeGoalModal(); }
+        function clearAllData() { if(confirm("Effacer tout ?")) { localStorage.clear(); location.reload(); } }
+        window.onload = load;
+    </script>
+</body>
+</html>
